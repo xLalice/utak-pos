@@ -42,7 +42,6 @@ export default function Home() {
     };
 
     const handlePlaceOrder = () => {
-        alert('Order Placed Successfully! (Database integration needed for real transaction)');
         setCart([]);
         setIsSenior(false);
     };

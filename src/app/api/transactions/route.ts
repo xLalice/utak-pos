@@ -38,3 +38,25 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Failed to create transaction' }, { status: 500 });
     }
 }
+
+export async function GET() {
+    try {
+        const transactions = await prisma.transaction.findMany({
+            take: 50,
+            orderBy: {
+                date: 'desc'
+            },
+            include: {
+                items: {
+                    include: {
+                        product: true
+                    }
+                }
+            }
+        });
+        return NextResponse.json(transactions);
+    } catch (error) {
+        console.error(error);
+        return NextResponse.json({ error: 'Failed to fetch transactions' }, { status: 500 });
+    }
+}

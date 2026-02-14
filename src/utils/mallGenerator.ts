@@ -1,6 +1,6 @@
 import { TaxBreakdown } from './taxEngine';
 
-interface DailySalesSummary {
+export interface DailySalesSummary {
     date: string; // YYYY-MM-DD
     totalGrossSales: number; // Sum of all items before tax logic
     totalVatableSales: number;

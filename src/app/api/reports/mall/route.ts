@@ -1,19 +1,18 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/utils/prisma';
 import { generateEODFileContent } from '@/utils/mallGenerator';
+import type { DailySalesSummary } from '@/utils/mallGenerator';
 
 export async function POST(request: Request) {
     try {
-        // For this demo, let's just fetch all transactions for "today" (or all time if simple)
-        // To fit the "Daily Sales" requirement, we'd filter by date.
-        // For now, let's aggregate EVERYTHING to show data.
 
         const transactions = await prisma.transaction.findMany();
+        const today = new Date().toLocaleDateString('en-CA');
 
-        const summary = transactions.reduce((acc, curr) => {
+        const summary = transactions.reduce((acc: DailySalesSummary, curr: any) => {
             return {
-                date: new Date().toISOString().split('T')[0],
-                totalGrossSales: acc.totalGrossSales + curr.totalAmount, // Assuming totalAmount is gross
+                ...acc,
+                totalGrossSales: acc.totalGrossSales + curr.totalAmount,
                 totalVatableSales: acc.totalVatableSales + curr.vatableSales,
                 totalVatAmount: acc.totalVatAmount + curr.vatAmount,
                 totalVatExemptSales: acc.totalVatExemptSales + curr.vatExemptSales,
@@ -22,7 +21,7 @@ export async function POST(request: Request) {
                 grandTotal: acc.grandTotal + curr.totalAmount
             };
         }, {
-            date: '',
+            date: today,
             totalGrossSales: 0,
             totalVatableSales: 0,
             totalVatAmount: 0,
@@ -30,7 +29,7 @@ export async function POST(request: Request) {
             totalDiscount: 0,
             totalServiceCharge: 0,
             grandTotal: 0
-        });
+        } as DailySalesSummary);
 
         const fileContent = generateEODFileContent(summary);
 

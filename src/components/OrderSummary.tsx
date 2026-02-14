@@ -13,8 +13,9 @@ import {
     Paper,
     CircularProgress
 } from '@mui/material';
-import { Add, Remove, Delete, ReceiptLong } from '@mui/icons-material';
+import { Calculate, RestartAlt, ReceiptLong, Add, Remove, Delete } from '@mui/icons-material';
 import { calculateTransaction, formatCurrency } from '../utils/taxEngine';
+import FeedbackDialog, { FeedbackType } from './FeedbackDialog';
 
 // Reuse type or import if shared properly
 export interface CartItem {
@@ -45,6 +46,13 @@ export default function OrderSummary({
 }: OrderSummaryProps) {
 
     const [isProcessing, setIsProcessing] = useState(false);
+    const [feedback, setFeedback] = useState<{ open: boolean; type: FeedbackType; title: string; message: string }>({
+        open: false,
+        type: 'info',
+        title: '',
+        message: ''
+    });
+
     const subtotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
 
     const summary = useMemo(() =>
@@ -64,14 +72,29 @@ export default function OrderSummary({
             });
 
             if (response.ok) {
-                alert('Transaction Recorded Successfully!');
+                setFeedback({
+                    open: true,
+                    type: 'success',
+                    title: 'Success!',
+                    message: 'Transaction recorded successfully.'
+                });
                 onPlaceOrder(); // Clears cart in parent
             } else {
-                alert('Failed to record transaction');
+                setFeedback({
+                    open: true,
+                    type: 'error',
+                    title: 'Transaction Failed',
+                    message: 'Could not record transaction. Please try again.'
+                });
             }
         } catch (e) {
             console.error(e);
-            alert('Error connecting to server');
+            setFeedback({
+                open: true,
+                type: 'error',
+                title: 'Connection Error',
+                message: 'Failed to connect to the server.'
+            });
         } finally {
             setIsProcessing(false);
         }
@@ -96,126 +119,185 @@ export default function OrderSummary({
                 a.click();
                 window.URL.revokeObjectURL(url);
                 document.body.removeChild(a);
+
+                setFeedback({
+                    open: true,
+                    type: 'success',
+                    title: 'Report Generated',
+                    message: 'The EOD report has been downloaded.'
+                });
             } else {
-                alert('Failed to generate report');
+                setFeedback({
+                    open: true,
+                    type: 'error',
+                    title: 'Report Failed',
+                    message: 'Could not generate the daily report.'
+                });
             }
         } catch (e) {
             console.error(e);
-            alert('Error generating report');
+            setFeedback({
+                open: true,
+                type: 'error',
+                title: 'Error',
+                message: 'An unexpected error occurred.'
+            });
         } finally {
             setIsProcessing(false);
         }
     };
 
     return (
-        <Paper sx={{ height: '100%', display: 'flex', flexDirection: 'column', p: 2 }} elevation={3}>
-            <Typography variant="h6" gutterBottom>
-                Current Order
-            </Typography>
+        <Paper sx={{
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            p: 0,
+            bgcolor: 'background.paper',
+            overflow: 'hidden'
+        }} elevation={10}>
+            <Box sx={{ p: 3, pb: 2, bgcolor: 'rgba(255, 255, 255, 0.03)' }}>
+                <Typography variant="overline" color="text.secondary" sx={{ letterSpacing: 2 }}>
+                    ORDER SUMMARY
+                </Typography>
+                <Typography variant="h4" fontWeight="800" sx={{ mt: 1 }}>
+                    Current Bill
+                </Typography>
+            </Box>
 
-            <Box sx={{ flexGrow: 1, overflow: 'auto', mb: 2 }}>
+            <Box sx={{ flexGrow: 1, overflow: 'auto', px: 3, mb: 2 }}>
                 {cart.length === 0 ? (
-                    <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic', mt: 4, textAlign: 'center' }}>
-                        No items in cart
-                    </Typography>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', opacity: 0.5 }}>
+                        <ReceiptLong sx={{ fontSize: 60, mb: 2 }} />
+                        <Typography variant="body1">No items yet</Typography>
+                    </Box>
                 ) : (
-                    <List dense>
+                    <List disablePadding>
                         {cart.map((item) => (
-                            <ListItem
-                                key={item.id}
-                                secondaryAction={
-                                    <IconButton edge="end" aria-label="delete" onClick={() => onDelete(item.id)}>
-                                        <Delete fontSize="small" color="error" />
-                                    </IconButton>
-                                }
-                            >
-                                <ListItemText
-                                    primary={item.name}
-                                    secondary={`${formatCurrency(item.price)} x ${item.quantity}`}
-                                />
-                                <Box sx={{ display: 'flex', alignItems: 'center', mr: 1 }}>
-                                    <IconButton size="small" onClick={() => onRemove(item.id)}>
-                                        <Remove fontSize="small" />
-                                    </IconButton>
-                                    <Typography variant="body2" sx={{ mx: 1 }}>{item.quantity}</Typography>
-                                    <IconButton size="small" onClick={() => onAdd(item)}>
-                                        <Add fontSize="small" />
-                                    </IconButton>
-                                </Box>
-                            </ListItem>
+                            <React.Fragment key={item.id}>
+                                <ListItem
+                                    disableGutters
+                                    sx={{ py: 2 }}
+                                    secondaryAction={
+                                        <IconButton edge="end" aria-label="delete" onClick={() => onDelete(item.id)} size="small" sx={{ color: 'error.main', opacity: 0.7, '&:hover': { opacity: 1 } }}>
+                                            <Delete fontSize="small" />
+                                        </IconButton>
+                                    }
+                                >
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', width: '100%', pr: 6 }}>
+                                            <Typography variant="body1" fontWeight="600">{item.name}</Typography>
+                                            <Typography variant="body1" fontWeight="600">{formatCurrency(item.price * item.quantity)}</Typography>
+                                        </Box>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', border: '1px solid', borderColor: 'divider', borderRadius: 8 }}>
+                                                <IconButton size="small" onClick={() => onRemove(item.id)} sx={{ p: 0.5 }}>
+                                                    <Remove fontSize="small" sx={{ fontSize: 16 }} />
+                                                </IconButton>
+                                                <Typography variant="caption" sx={{ mx: 1.5, fontWeight: 'bold' }}>{item.quantity}</Typography>
+                                                <IconButton size="small" onClick={() => onAdd(item)} sx={{ p: 0.5 }}>
+                                                    <Add fontSize="small" sx={{ fontSize: 16 }} />
+                                                </IconButton>
+                                            </Box>
+                                            <Typography variant="caption" color="text.secondary" sx={{ ml: 2 }}>
+                                                @ {formatCurrency(item.price)}
+                                            </Typography>
+                                        </Box>
+                                    </Box>
+                                </ListItem>
+                                <Divider sx={{ borderStyle: 'dashed', opacity: 0.5 }} />
+                            </React.Fragment>
                         ))}
                     </List>
                 )}
             </Box>
 
-            <Divider sx={{ my: 1 }} />
+            <Paper elevation={20} sx={{ p: 3, bgcolor: 'background.default', borderRadius: '24px 24px 0 0', mx: -0.5, mb: -0.5, border: '1px solid rgba(255,255,255,0.05)' }}>
+                <Box sx={{ mb: 2 }}>
+                    <FormControlLabel
+                        control={
+                            <Switch
+                                checked={isSenior}
+                                onChange={(e) => setIsSenior(e.target.checked)}
+                                color="primary"
+                            />
+                        }
+                        label={<Typography variant="body2" color="text.secondary">Apply Senior/PWD Discount</Typography>}
+                    />
+                </Box>
 
-            <Box sx={{ mb: 2 }}>
-                <FormControlLabel
-                    control={
-                        <Switch
-                            checked={isSenior}
-                            onChange={(e) => setIsSenior(e.target.checked)}
-                            color="secondary"
-                        />
-                    }
-                    label="Senior/PWD Discount"
-                />
-            </Box>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mb: 3 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <Typography variant="body2" color="text.secondary">Subtotal</Typography>
+                        <Typography variant="body2" fontWeight="600">{formatCurrency(subtotal)}</Typography>
+                    </Box>
 
-            <Box sx={{ mb: 2, '& > div': { display: 'flex', justifyContent: 'space-between', mb: 0.5 } }}>
-                <Typography variant="body2">Subtotal:</Typography>
-                <Typography variant="body2">{formatCurrency(subtotal)}</Typography>
+                    {isSenior ? (
+                        <>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                <Typography variant="body2" color="text.secondary">VAT Exempt Sales</Typography>
+                                <Typography variant="body2">{formatCurrency(summary.vatExemptSales)}</Typography>
+                            </Box>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                <Typography variant="body2" color="success.main">Discount (20%)</Typography>
+                                <Typography variant="body2" color="success.main">-{formatCurrency(summary.discountAmount)}</Typography>
+                            </Box>
+                        </>
+                    ) : (
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <Typography variant="body2" color="text.secondary">VAT (12%)</Typography>
+                            <Typography variant="body2" color="text.secondary">{formatCurrency(summary.vatAmount)}</Typography>
+                        </Box>
+                    )}
 
-                {isSenior ? (
-                    <>
-                        <Typography variant="body2">VAT Exempt Sales:</Typography>
-                        <Typography variant="body2">{formatCurrency(summary.vatExemptSales)}</Typography>
-                        <Typography variant="body2" color="success.main">Less Discount (20%):</Typography>
-                        <Typography variant="body2" color="success.main">-{formatCurrency(summary.discountAmount)}</Typography>
-                    </>
-                ) : (
-                    <>
-                        <Typography variant="body2" color="text.secondary">Vatable Sales:</Typography>
-                        <Typography variant="body2" color="text.secondary">{formatCurrency(summary.vatableSales)}</Typography>
-                        <Typography variant="body2" color="text.secondary">VAT (12%):</Typography>
-                        <Typography variant="body2" color="text.secondary">{formatCurrency(summary.vatAmount)}</Typography>
-                    </>
-                )}
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <Typography variant="body2" color="text.secondary">Service Charge (10%)</Typography>
+                        <Typography variant="body2" color="text.secondary">{formatCurrency(summary.serviceCharge)}</Typography>
+                    </Box>
 
-                <Typography variant="body2">Service Charge (10%):</Typography>
-                <Typography variant="body2">{formatCurrency(summary.serviceCharge)}</Typography>
+                </Box>
 
-                <Divider sx={{ my: 1 }} />
+                <Divider sx={{ mb: 2, borderColor: 'rgba(255,255,255,0.1)' }} />
 
-                <Typography variant="h6" fontWeight="bold">Total:</Typography>
-                <Typography variant="h6" fontWeight="bold" color="primary.main">
-                    {formatCurrency(summary.totalAmount)}
-                </Typography>
-            </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                    <Typography variant="h6" fontWeight="bold">TOTAL</Typography>
+                    <Typography variant="h4" fontWeight="800" color="primary.main">
+                        {formatCurrency(summary.totalAmount)}
+                    </Typography>
+                </Box>
 
-            <Button
-                variant="contained"
-                color="primary"
-                fullWidth
-                size="large"
-                onClick={handleCharge}
-                disabled={cart.length === 0 || isProcessing}
-                sx={{ mb: 1 }}
-            >
-                {isProcessing ? <CircularProgress size={24} color="inherit" /> : `Charge ${formatCurrency(summary.totalAmount)}`}
-            </Button>
+                <Button
+                    variant="contained"
+                    color="primary"
+                    fullWidth
+                    size="large"
+                    onClick={handleCharge}
+                    disabled={cart.length === 0 || isProcessing}
+                    sx={{ mb: 1.5, py: 1.5, fontSize: '1.1rem', borderRadius: 3 }}
+                >
+                    {isProcessing ? <CircularProgress size={24} color="inherit" /> : 'CHARGE ORDER'}
+                </Button>
 
-            <Button
-                variant="outlined"
-                color="secondary"
-                fullWidth
-                startIcon={<ReceiptLong />}
-                onClick={handleGenerateReport}
-                disabled={isProcessing}
-            >
-                {isProcessing ? 'Generating...' : 'Wait! Generate Mall File'}
-            </Button>
+                <Button
+                    variant="outlined"
+                    color="secondary"
+                    fullWidth
+                    size="small"
+                    onClick={handleGenerateReport}
+                    disabled={isProcessing}
+                    sx={{ opacity: 0.7, '&:hover': { opacity: 1 } }}
+                >
+                    {isProcessing ? 'Generating...' : 'Generate EOD Report'}
+                </Button>
+            </Paper>
+
+            <FeedbackDialog
+                open={feedback.open}
+                onClose={() => setFeedback({ ...feedback, open: false })}
+                type={feedback.type}
+                title={feedback.title}
+                message={feedback.message}
+            />
         </Paper>
     );
 }
