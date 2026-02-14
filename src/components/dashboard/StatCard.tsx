@@ -50,22 +50,11 @@ export default function StatCard({ title, value, icon: Icon, color = '#FFD700' }
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: color
+                color: color,
+                boxShadow: `0 0 20px ${color}33` // Centered glow matching the logo style roughly
             }}>
                 <Icon sx={{ fontSize: 30 }} />
             </Box>
-
-            <Box sx={{
-                position: 'absolute',
-                top: -20,
-                right: -20,
-                width: 100,
-                height: 100,
-                borderRadius: '50%',
-                bgcolor: color,
-                opacity: 0.05,
-                pointerEvents: 'none'
-            }} />
         </Paper>
     );
 }
